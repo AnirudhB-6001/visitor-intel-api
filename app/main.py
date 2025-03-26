@@ -34,8 +34,20 @@ async def log_visitor(visit: VisitLog, request: Request):
     enriched = enrich_ip_data(ip)
     print("Enriched IP data:", enriched)
 
-    # Combine all data to send to Airtable
-    payload = {**visit.dict(), **enriched}
+    # Map data fields to Airtable columns
+    payload = {
+        "Page Visited": visit.page,
+        "Referrer": visit.referrer,
+        "Device Type": visit.device,
+        "Session ID": visit.session_id,
+        "IP Address": ip,
+        "City": enriched.get("City"),
+        "Region": enriched.get("Region"),
+        "Country": enriched.get("Country"),
+        "Organization": enriched.get("Organization"),
+        "Enriched Source": "IPinfo"
+    }
+
     print("Final payload sent to Airtable:", payload)
 
     # Send to Airtable
