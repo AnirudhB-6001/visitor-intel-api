@@ -1,9 +1,10 @@
 import os
 import requests
 
-AIRTABLE_BASE_ID = os.getenv("appnka3eCAxf93YoF")
+AIRTABLE_BASE_ID = os.getenv("AIRTABLE_BASE_ID")
 AIRTABLE_TABLE_NAME = "Visitors Log"
-AIRTABLE_TOKEN = os.getenv("patpmXlYdghG9ub2B.5fd8c65c565f1322adc0fb5f13041ffceacab5e2f263df07c7953db6db820403")
+AIRTABLE_TOKEN = os.getenv("AIRTABLE_TOKEN")
+
 
 def log_to_airtable(data):
     url = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{AIRTABLE_TABLE_NAME}"
