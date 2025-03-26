@@ -6,7 +6,7 @@ from app.ipinfo import enrich_ip_data
 
 app = FastAPI()
 
-# ✅ Enable CORS so your React frontend can make POST requests
+# Enable CORS so your React frontend can make POST requests
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://anirudhbatraofficial.com"],
@@ -14,30 +14,31 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ✅ Define the request schema from the frontend
+# Define the request schema from the frontend
 class VisitLog(BaseModel):
     page: str
     referrer: str
     device: str
+    session_id: str = None  # Optional field to identify repeat visits
 
-# ✅ Main visitor logging endpoint
+# Main visitor logging endpoint
 @app.post("/log-visit")
 async def log_visitor(visit: VisitLog, request: Request):
     print("Raw data from frontend:", visit.dict())
 
-    # ✅ Extract IP address from the incoming request (for deployed version)
+    # Extract IP address from request
     ip = request.client.host
     print("Client IP address:", ip)
 
-    # ✅ Enrich IP address using IPinfo
+    # Enrich IP data using IPinfo
     enriched = enrich_ip_data(ip)
     print("Enriched IP data:", enriched)
 
-    # ✅ Combine frontend data + enriched data
+    # Combine all data to send to Airtable
     payload = {**visit.dict(), **enriched}
     print("Final payload sent to Airtable:", payload)
 
-    # ✅ Send to Airtable
+    # Send to Airtable
     response = log_to_airtable(payload)
     print("Airtable response:", response)
 
