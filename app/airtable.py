@@ -2,12 +2,10 @@ import os
 import requests
 
 AIRTABLE_BASE_ID = os.getenv("AIRTABLE_BASE_ID")
-AIRTABLE_TABLE_NAME = "Visitors Log"  # Ensure exact match with Airtable
+AIRTABLE_TABLE_NAME = "Visitors Log"
 AIRTABLE_TOKEN = os.getenv("AIRTABLE_TOKEN")
 
-# Optional debug mode
 DEBUG = True
-
 
 def log_to_airtable(data):
     url = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{AIRTABLE_TABLE_NAME}"
@@ -17,21 +15,8 @@ def log_to_airtable(data):
         "Content-Type": "application/json"
     }
 
-    # Map data to Airtable column names exactly
-    mapped_data = {
-        "Page Visited": data.get("page"),
-        "Referrer": data.get("referrer"),
-        "Device Type": data.get("device"),
-        "IP Address": data.get("IP Address"),
-        "City": data.get("City"),
-        "Region": data.get("Region"),
-        "Country": data.get("Country"),
-        "Organization": data.get("Organization"),
-        "Enriched Source": "IPinfo"  # Static for now
-    }
-
     payload = {
-        "fields": mapped_data
+        "fields": data  # Already pre-mapped in main.py
     }
 
     if DEBUG:

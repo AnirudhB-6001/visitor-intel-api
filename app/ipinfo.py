@@ -1,7 +1,7 @@
 import os
 import requests
 
-IPINFO_TOKEN = os.getenv("7ead18362b085a")
+IPINFO_TOKEN = os.getenv("IPINFO_TOKEN")
 
 def enrich_ip_data(ip):
     url = f"https://ipinfo.io/{ip}?token={IPINFO_TOKEN}"
