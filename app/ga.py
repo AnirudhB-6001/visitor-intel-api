@@ -34,8 +34,7 @@ def fetch_ga_sessions(start_days_ago=7, end_days_ago=0, limit=10):
             Dimension(name="pagePath"),
             Dimension(name="deviceCategory"),
             Dimension(name="city"),
-            Dimension(name="country"),
-            Dimension(name="source")
+            Dimension(name="country")
         ],
         metrics=[Metric(name="sessions")],
         date_ranges=[DateRange(start_date=start, end_date=end)],
