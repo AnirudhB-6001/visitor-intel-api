@@ -4,10 +4,10 @@ from google.oauth2 import service_account
 from google.analytics.data_v1beta import BetaAnalyticsDataClient
 from google.analytics.data_v1beta.types import DateRange, Dimension, Metric, RunReportRequest
 
-# Load GA4 credentials from JSON string in environment variable
+# Load GA4 credentials from Render environment
 credentials_json = os.getenv("GA4_CREDENTIALS_JSON")
 if not credentials_json:
-    raise ValueError("GA4_CREDENTIALS_JSON is missing in environment variables.")
+    raise ValueError("GA4_CREDENTIALS_JSON is missing.")
 
 credentials_dict = json.loads(credentials_json)
 credentials = service_account.Credentials.from_service_account_info(credentials_dict)
@@ -15,14 +15,14 @@ credentials = service_account.Credentials.from_service_account_info(credentials_
 # GA4 Property ID
 GA4_PROPERTY_ID = os.getenv("GA4_PROPERTY_ID")
 if not GA4_PROPERTY_ID:
-    raise ValueError("GA4_PROPERTY_ID is missing in environment variables.")
+    raise ValueError("GA4_PROPERTY_ID is missing.")
 
-# Analytics client
+# Client
 client = BetaAnalyticsDataClient(credentials=credentials)
 
-def fetch_ga_sessions(start_days_ago=1, end_days_ago=0, limit=10):
+def fetch_ga_sessions():
     print("GA4 Property ID:", GA4_PROPERTY_ID)
-    
+
     request = RunReportRequest(
         property=f"properties/{GA4_PROPERTY_ID}",
         dimensions=[
@@ -34,11 +34,13 @@ def fetch_ga_sessions(start_days_ago=1, end_days_ago=0, limit=10):
             Dimension(name="source")
         ],
         metrics=[Metric(name="sessions")],
-        date_ranges=[DateRange(start_date=f"{start_days_ago}daysAgo", end_date=f"{end_days_ago}daysAgo")],
-        limit=limit
+        date_ranges=[DateRange(start_date="7daysAgo", end_date="today")]
     )
 
     response = client.run_report(request)
+
+    if not response.rows:
+        print("No data returned from GA4 API.")
 
     session_data = []
     for row in response.rows:
@@ -53,4 +55,5 @@ def fetch_ga_sessions(start_days_ago=1, end_days_ago=0, limit=10):
         }
         session_data.append(session)
 
+    print("Sessions fetched:", session_data)
     return session_data
