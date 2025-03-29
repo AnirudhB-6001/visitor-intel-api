@@ -20,8 +20,12 @@ if not GA4_PROPERTY_ID:
 # Client
 client = BetaAnalyticsDataClient(credentials=credentials)
 
-def fetch_ga_sessions():
+def fetch_ga_sessions(start_days_ago=7, end_days_ago=0, limit=10):
     print("GA4 Property ID:", GA4_PROPERTY_ID)
+
+    # Convert numeric days ago to GA4-compatible date strings
+    start = f"{start_days_ago}daysAgo"
+    end = f"{end_days_ago}daysAgo" if end_days_ago > 0 else "today"
 
     request = RunReportRequest(
         property=f"properties/{GA4_PROPERTY_ID}",
@@ -34,7 +38,8 @@ def fetch_ga_sessions():
             Dimension(name="source")
         ],
         metrics=[Metric(name="sessions")],
-        date_ranges=[DateRange(start_date="7daysAgo", end_date="today")]
+        date_ranges=[DateRange(start_date=start, end_date=end)],
+        limit=limit
     )
 
     response = client.run_report(request)
