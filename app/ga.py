@@ -1,21 +1,28 @@
 import os
 import json
+from google.oauth2 import service_account
 from google.analytics.data_v1beta import BetaAnalyticsDataClient
 from google.analytics.data_v1beta.types import DateRange, Dimension, Metric, RunReportRequest
-from google.oauth2 import service_account
 
-# Load credentials from Render-safe environment variable
+# Load GA4 credentials from JSON string in environment variable
+credentials_json = os.getenv("GA4_CREDENTIALS_JSON")
+if not credentials_json:
+    raise ValueError("GA4_CREDENTIALS_JSON is missing in environment variables.")
+
+credentials_dict = json.loads(credentials_json)
+credentials = service_account.Credentials.from_service_account_info(credentials_dict)
+
+# GA4 Property ID
 GA4_PROPERTY_ID = os.getenv("GA4_PROPERTY_ID")
+if not GA4_PROPERTY_ID:
+    raise ValueError("GA4_PROPERTY_ID is missing in environment variables.")
 
-SERVICE_ACCOUNT_INFO = os.getenv("GA4_CREDENTIALS_JSON")
-if SERVICE_ACCOUNT_INFO is None:
-    raise EnvironmentError("Missing GA4_CREDENTIALS_JSON in environment variables")
-
-credentials = service_account.Credentials.from_service_account_info(json.loads(SERVICE_ACCOUNT_INFO))
+# Analytics client
 client = BetaAnalyticsDataClient(credentials=credentials)
 
 def fetch_ga_sessions(start_days_ago=1, end_days_ago=0, limit=10):
     print("GA4 Property ID:", GA4_PROPERTY_ID)
+    
     request = RunReportRequest(
         property=f"properties/{GA4_PROPERTY_ID}",
         dimensions=[
