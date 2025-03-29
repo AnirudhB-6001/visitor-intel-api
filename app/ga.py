@@ -54,7 +54,6 @@ def fetch_ga_sessions(start_days_ago=7, end_days_ago=0, limit=10):
             "device": row.dimension_values[2].value,
             "city": row.dimension_values[3].value,
             "country": row.dimension_values[4].value,
-            "referrer": row.dimension_values[5].value,
             "sessions": row.metric_values[0].value
         }
         session_data.append(session)
