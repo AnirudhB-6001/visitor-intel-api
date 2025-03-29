@@ -1,16 +1,17 @@
 import os
+import json
 from google.analytics.data_v1beta import BetaAnalyticsDataClient
 from google.analytics.data_v1beta.types import DateRange, Dimension, Metric, RunReportRequest
 from google.oauth2 import service_account
 
-# Path to your service account key
-KEY_PATH = os.path.join("secrets", "visitor-intel-ga-credentials.json")
-
-# GA4 Property ID from environment
+# Load credentials from Render-safe environment variable
 GA4_PROPERTY_ID = os.getenv("GA4_PROPERTY_ID")
 
-# Setup client
-credentials = service_account.Credentials.from_service_account_file(KEY_PATH)
+SERVICE_ACCOUNT_INFO = os.getenv("GA4_CREDENTIALS_JSON")
+if SERVICE_ACCOUNT_INFO is None:
+    raise EnvironmentError("Missing GA4_CREDENTIALS_JSON in environment variables")
+
+credentials = service_account.Credentials.from_service_account_info(json.loads(SERVICE_ACCOUNT_INFO))
 client = BetaAnalyticsDataClient(credentials=credentials)
 
 def fetch_ga_sessions(start_days_ago=1, end_days_ago=0, limit=10):
