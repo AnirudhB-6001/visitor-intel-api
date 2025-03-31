@@ -1,9 +1,9 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from app.airtable import log_to_airtable
+from app.airtable import log_to_airtable, push_ga_sessions_to_airtable
 from app.ipinfo import enrich_ip_data
-from app.ga import fetch_ga_sessions  # ✅ Moved this to top-level
+from app.ga import fetch_ga_sessions
 
 app = FastAPI()
 
@@ -60,5 +60,13 @@ async def log_visitor(visit: VisitLog, request: Request):
 # GA4 testing route
 @app.get("/fetch-ga-data")
 async def test_ga():
-    sessions = fetch_ga_sessions(start_days_ago=7, end_days_ago=0, limit=10)
+    sessions = fetch_ga_sessions()
     return {"sessions": sessions}
+
+# Push GA4 sessions to Airtable
+@app.post("/push-ga-sessions")
+async def push_ga_sessions():
+    sessions = fetch_ga_sessions()
+    print("Fetched sessions:", sessions)
+    record_ids = push_ga_sessions_to_airtable(sessions)
+    return {"inserted_records": len(record_ids), "record_ids": record_ids}
