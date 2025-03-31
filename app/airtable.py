@@ -63,9 +63,17 @@ def push_ga_sessions_to_airtable(sessions):
             print("🌀 Pushing GA session to Airtable:", fields)
 
         response = requests.post(url, json=payload, headers=headers)
+
         if response.status_code == 200:
             inserted_ids.append(response.json().get("id"))
         else:
-            print("⚠️ Airtable GA insert failed:", response.text)
+            print("⚠️ Airtable GA insert failed:")
+            print("   🔴 Status Code:", response.status_code)
+            try:
+                print("   📩 Response JSON:", response.json())
+            except Exception as e:
+                print("   ⚠️ Failed to parse JSON response:", str(e))
+                print("   📄 Raw Response:", response.text)
+            print("   📦 Payload was:", payload)
 
     return inserted_ids
