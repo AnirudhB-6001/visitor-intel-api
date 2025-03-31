@@ -7,7 +7,7 @@ AIRTABLE_PASSIVE_TABLE_NAME = "Visitors Log"
 
 # === GA4 Sessions (Raw GA4 Data) ===
 AIRTABLE_GA_BASE_ID = os.getenv("AIRTABLE_GA_BASE_ID")
-AIRTABLE_GA_TABLE_NAME = "GA4 Raw Sessions"
+AIRTABLE_GA_TABLE_NAME = "Sessions"
 
 AIRTABLE_TOKEN = os.getenv("AIRTABLE_TOKEN")
 DEBUG = True
