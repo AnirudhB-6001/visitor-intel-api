@@ -23,7 +23,6 @@ def log_to_airtable(data):
     if DEBUG:
         print("🔄 Sending to Airtable (Passive Visitor Log):")
         print("🔗 URL:", url)
-        print("📝 Headers:", headers)
         print("📦 Payload:", payload)
 
     response = requests.post(url, json=payload, headers=headers)
@@ -48,7 +47,7 @@ def push_ga_sessions_to_airtable(sessions):
             "Device": session.get("device"),
             "City": session.get("city"),
             "Country": session.get("country"),
-            "Session Source": session.get("session_source"),
+            "Session Source": session.get("session_source"),  # Can be None
             "Sessions": int(session.get("sessions", 0))
         }
 
