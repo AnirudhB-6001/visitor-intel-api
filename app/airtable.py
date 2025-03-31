@@ -42,13 +42,13 @@ def push_ga_sessions_to_airtable(sessions):
 
     inserted_ids = []
     for session in sessions:
-        device_value = session.get("device", "").lower()
+        device = session.get("device")
+        device_value = device.get("name") if isinstance(device, dict) else device
 
-        # ✅ Wrap device in {"name": value} for singleSelect
         fields = {
             "Timestamp": session.get("timestamp"),
             "Page": session.get("page"),
-            "Device": {"name": device_value},
+            "Device": device_value,
             "City": session.get("city"),
             "Country": session.get("country"),
             "Sessions": int(session.get("sessions", 0))
