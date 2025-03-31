@@ -33,7 +33,6 @@ def log_to_airtable(data):
 
     return response.json()
 
-
 def push_ga_sessions_to_airtable(sessions):
     url = f"https://api.airtable.com/v0/{AIRTABLE_GA_BASE_ID}/{AIRTABLE_GA_TABLE_NAME}"
     headers = {
@@ -43,16 +42,19 @@ def push_ga_sessions_to_airtable(sessions):
 
     inserted_ids = []
     for session in sessions:
+        device_value = session.get("device", "").lower()
+
+        # ✅ Wrap device in {"name": value} for singleSelect
         fields = {
             "Timestamp": session.get("timestamp"),
             "Page": session.get("page"),
-            "Device": session.get("device"),
+            "Device": {"name": device_value},
             "City": session.get("city"),
             "Country": session.get("country"),
             "Sessions": int(session.get("sessions", 0))
         }
 
-        # Add "Session Source" only if present and not None
+        # Optional field
         session_source = session.get("session_source")
         if session_source:
             fields["Session Source"] = session_source
