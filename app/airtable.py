@@ -42,8 +42,9 @@ def push_ga_sessions_to_airtable(sessions):
 
     inserted_ids = []
     for session in sessions:
-        device = session.get("device")
-        device_value = device.get("name") if isinstance(device, dict) else device
+        # Handle singleSelect field for 'Device'
+        device_raw = session.get("device")
+        device_value = {"name": device_raw} if isinstance(device_raw, str) else device_raw
 
         fields = {
             "Timestamp": session.get("timestamp"),
