@@ -4,3 +4,4 @@ requests
 google-analytics-data
 sqlalchemy
 dotenv
+psycopg2
