@@ -1,2 +1,3 @@
 secrets/visitor-intel-ga-credentials.json
-app/.env
+.env
+visitor_logs.db
