@@ -1,26 +1,23 @@
 import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.ext.declarative import declarative_base
 from app.models import Base
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
+# ✅ Load .env variables
 load_dotenv()
 
-# PostgreSQL connection from .env
-POSTGRES_DB_URL = os.getenv("DATABASE_URL")
+# ✅ Use PostgreSQL URL from env vars
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-if not POSTGRES_DB_URL:
-    raise RuntimeError("❌ DATABASE_URL is missing in .env file!")
+# ✅ Use PostgreSQL engine
+engine = create_engine(DATABASE_URL)
 
-# Create SQLAlchemy engine
-engine = create_engine(POSTGRES_DB_URL, pool_pre_ping=True)
-
-# Session factory
+# ✅ Create a session
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Dependency for FastAPI routes
+# === Function to get DB session ===
 def get_db():
     db = SessionLocal()
     try:
@@ -28,10 +25,7 @@ def get_db():
     finally:
         db.close()
 
-# DB Initialization
+# === Init DB (create tables) ===
 def init_db():
-    try:
-        Base.metadata.create_all(bind=engine)
-        print("✅ PostgreSQL tables created successfully.")
-    except OperationalError as e:
-        print("❌ Database initialization error:", e)
+    Base.metadata.create_all(bind=engine)
+    print("✅ PostgreSQL tables created successfully.")
