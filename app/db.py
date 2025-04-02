@@ -4,20 +4,20 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from app.models import Base
 
-# ✅ Get from Render env vars
+# ✅ Use PostgreSQL if available
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-# ✅ Fail fast if env var is not set
+# ✅ Safety check
 if not DATABASE_URL:
-    raise ValueError("❌ DATABASE_URL environment variable not set.")
+    raise ValueError("❌ DATABASE_URL environment variable not set!")
 
-# ✅ Use PostgreSQL
+# ✅ Create PostgreSQL engine
 engine = create_engine(DATABASE_URL)
 
-# ✅ Create session
+# ✅ Session
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# === Get DB session
+# ✅ DB dependency
 def get_db():
     db = SessionLocal()
     try:
@@ -25,7 +25,7 @@ def get_db():
     finally:
         db.close()
 
-# === Init DB
+# ✅ Init
 def init_db():
     Base.metadata.create_all(bind=engine)
     print("✅ PostgreSQL tables created successfully.")
