@@ -1,0 +1,7 @@
++-------------------+       +-----------------------+       +------------------------+
+|  Website Frontend | <-->  | FastAPI Backend (API) | <-->  |     SQLite Database     |
+|  (React + Logger) |       | - /log-visit          |       | - VisitorSession table |
+|                   |       | - /dashboard (JSON)   |       +------------------------+
++-------------------+       +-----------------------+
+
+Frontend sends structured data including session_id → FastAPI logs to SQLite → Data visualized in dashboard.
