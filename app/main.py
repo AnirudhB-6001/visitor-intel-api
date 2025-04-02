@@ -1,9 +1,10 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from app.airtable import log_to_airtable, push_ga_sessions_to_airtable
+from sqlalchemy.orm import Session
+from app.db import get_db, init_db
 from app.ipinfo import enrich_ip_data
-from app.ga import fetch_ga_sessions
+from app.models import VisitorLog
 
 app = FastAPI()
 
@@ -15,58 +16,55 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Define the request schema from the frontend
+# Initialize the database on startup
+@app.on_event("startup")
+def on_startup():
+    init_db()
+
+# Request schema
 class VisitLog(BaseModel):
     page: str
     referrer: str
     device: str
-    session_id: str = None  # Optional field to identify repeat visits
+    session_id: str = None
+    utm_source: str = None
+    utm_medium: str = None
+    utm_campaign: str = None
+    utm_term: str = None
+    utm_content: str = None
 
-# Main visitor logging endpoint
 @app.post("/log-visit")
-async def log_visitor(visit: VisitLog, request: Request):
-    print("Raw data from frontend:", visit.dict())
+def log_visitor(visit: VisitLog, request: Request, db: Session = Depends(get_db)):
+    print("📥 Raw data from frontend:", visit.dict())
 
-    # Extract IP address from request
     ip = request.client.host
-    print("Client IP address:", ip)
+    print("🌍 Client IP address:", ip)
 
-    # Enrich IP data using IPinfo
     enriched = enrich_ip_data(ip)
-    print("Enriched IP data:", enriched)
+    print("🔍 Enriched IP data:", enriched)
 
-    # Map data fields to Airtable columns
-    payload = {
-        "Page Visited": visit.page,
-        "Referrer": visit.referrer,
-        "Device Type": visit.device,
-        "Session ID": visit.session_id,
-        "IP Address": ip,
-        "City": enriched.get("City"),
-        "Region": enriched.get("Region"),
-        "Country": enriched.get("Country"),
-        "Organization": enriched.get("Organization"),
-        "Enriched Source": "IPinfo"
-    }
+    # Create DB record
+    record = VisitorLog(
+        page=visit.page,
+        referrer=visit.referrer,
+        device=visit.device,
+        session_id=visit.session_id,
+        ip_address=ip,
+        city=enriched.get("City"),
+        region=enriched.get("Region"),
+        country=enriched.get("Country"),
+        organization=enriched.get("Organization"),
+        enriched_source="IPinfo",
+        utm_source=visit.utm_source,
+        utm_medium=visit.utm_medium,
+        utm_campaign=visit.utm_campaign,
+        utm_term=visit.utm_term,
+        utm_content=visit.utm_content,
+    )
 
-    print("Final payload sent to Airtable:", payload)
+    db.add(record)
+    db.commit()
+    db.refresh(record)
 
-    # Send to Airtable
-    response = log_to_airtable(payload)
-    print("Airtable response:", response)
-
-    return {"status": "success", "airtable_id": response.get("id")}
-
-# GA4 testing route
-@app.get("/fetch-ga-data")
-async def test_ga():
-    sessions = fetch_ga_sessions()
-    return {"sessions": sessions}
-
-# Push GA4 sessions to Airtable
-@app.post("/push-ga-sessions")
-async def push_ga_sessions():
-    sessions = fetch_ga_sessions()
-    print("Fetched sessions:", sessions)
-    record_ids = push_ga_sessions_to_airtable(sessions)
-    return {"inserted_records": len(record_ids), "record_ids": record_ids}
+    print("✅ Record inserted into SQLite:", record.id)
+    return {"status": "success", "db_id": record.id}
