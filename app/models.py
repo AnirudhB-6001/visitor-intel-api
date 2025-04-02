@@ -29,3 +29,14 @@ class VisitorLog(Base):
 
     # Fingerprinting
     fingerprint_id = Column(String)
+
+# 🆕 Event log table
+class VisitorEventLog(Base):
+    __tablename__ = "visitor_event_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+    session_id = Column(String)
+    fingerprint_id = Column(String)
+    event_type = Column(String)
+    event_data = Column(String)

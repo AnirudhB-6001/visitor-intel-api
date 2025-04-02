@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from app.db import get_db, init_db
 from app.ipinfo import enrich_ip_data
-from app.models import VisitorLog
+from app.models import VisitorLog, VisitorEventLog  # 🆕 Include event model
 
 app = FastAPI()
 
@@ -21,7 +21,7 @@ app.add_middleware(
 def on_startup():
     init_db()
 
-# Request schema
+# === Visitor Passive Logger ===
 class VisitLog(BaseModel):
     page: str
     referrer: str
@@ -44,7 +44,6 @@ def log_visitor(visit: VisitLog, request: Request, db: Session = Depends(get_db)
     enriched = enrich_ip_data(ip)
     print("🔍 Enriched IP data:", enriched)
 
-    # Create DB record
     record = VisitorLog(
         page=visit.page,
         referrer=visit.referrer,
@@ -70,3 +69,28 @@ def log_visitor(visit: VisitLog, request: Request, db: Session = Depends(get_db)
 
     print("✅ Record inserted into SQLite:", record.id)
     return {"status": "success", "db_id": record.id}
+
+# === Custom Event Logger ===
+class EventLog(BaseModel):
+    session_id: str
+    fingerprint_id: str
+    event_type: str  # e.g., "button_click", "scroll", "form_submit"
+    event_data: str = None  # Optional details, e.g., "clicked-pricing-button"
+
+@app.post("/log-event")
+def log_event(event: EventLog, db: Session = Depends(get_db)):
+    print("📍 Event received:", event.dict())
+
+    record = VisitorEventLog(
+        session_id=event.session_id,
+        fingerprint_id=event.fingerprint_id,
+        event_type=event.event_type,
+        event_data=event.event_data,
+    )
+
+    db.add(record)
+    db.commit()
+    db.refresh(record)
+
+    print("✅ Event inserted into DB:", record.id)
+    return {"status": "event-logged", "event_id": record.id}
