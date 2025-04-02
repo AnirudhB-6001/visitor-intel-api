@@ -7,8 +7,15 @@ from app.ipinfo import enrich_ip_data
 from app.models import VisitorLog, VisitorEventLog, VisitorDerivedLog
 from datetime import datetime
 
+# 🆕 Import dashboard routes
+from app import dashboard
+
 app = FastAPI()
 
+# Include dashboard router
+app.include_router(dashboard.app)
+
+# CORS setup
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://anirudhbatraofficial.com"],
