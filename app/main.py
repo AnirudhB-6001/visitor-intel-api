@@ -13,7 +13,7 @@ from app import dashboard
 app = FastAPI()
 
 # Include dashboard router
-app.include_router(dashboard.app)
+app.include_router(dashboard.router)
 
 # CORS setup
 app.add_middleware(
