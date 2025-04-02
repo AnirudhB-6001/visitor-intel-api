@@ -1,20 +1,26 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
 import os
-from app.models import Base  # Import Base from models.py
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.exc import OperationalError
+from app.models import Base
+from dotenv import load_dotenv
 
-# SQLite DB path
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "visitor_logs.db")
+# Load environment variables from .env file
+load_dotenv()
 
-# Create the SQLAlchemy engine
-SQLALCHEMY_DATABASE_URL = f"sqlite:///{DB_PATH}"
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+# PostgreSQL connection from .env
+POSTGRES_DB_URL = os.getenv("DATABASE_URL")
 
-# Create a session factory
+if not POSTGRES_DB_URL:
+    raise RuntimeError("❌ DATABASE_URL is missing in .env file!")
+
+# Create SQLAlchemy engine
+engine = create_engine(POSTGRES_DB_URL, pool_pre_ping=True)
+
+# Session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# === Function to get a DB session ===
+# Dependency for FastAPI routes
 def get_db():
     db = SessionLocal()
     try:
@@ -22,6 +28,10 @@ def get_db():
     finally:
         db.close()
 
-# === Function to initialize the DB (creates tables if not exist) ===
+# DB Initialization
 def init_db():
-    Base.metadata.create_all(bind=engine)
+    try:
+        Base.metadata.create_all(bind=engine)
+        print("✅ PostgreSQL tables created successfully.")
+    except OperationalError as e:
+        print("❌ Database initialization error:", e)
