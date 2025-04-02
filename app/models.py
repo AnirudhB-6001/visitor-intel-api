@@ -20,9 +20,12 @@ class VisitorLog(Base):
     organization = Column(String)
     enriched_source = Column(String)
 
-    # 🆕 UTM fields
+    # UTM fields
     utm_source = Column(String)
     utm_medium = Column(String)
     utm_campaign = Column(String)
     utm_term = Column(String)
     utm_content = Column(String)
+
+    # Fingerprinting
+    fingerprint_id = Column(String)

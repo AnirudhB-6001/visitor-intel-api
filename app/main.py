@@ -32,6 +32,7 @@ class VisitLog(BaseModel):
     utm_campaign: str = None
     utm_term: str = None
     utm_content: str = None
+    fingerprint_id: str = None
 
 @app.post("/log-visit")
 def log_visitor(visit: VisitLog, request: Request, db: Session = Depends(get_db)):
@@ -60,6 +61,7 @@ def log_visitor(visit: VisitLog, request: Request, db: Session = Depends(get_db)
         utm_campaign=visit.utm_campaign,
         utm_term=visit.utm_term,
         utm_content=visit.utm_content,
+        fingerprint_id=visit.fingerprint_id,
     )
 
     db.add(record)
