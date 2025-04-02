@@ -20,6 +20,12 @@ app.add_middleware(
 def on_startup():
     init_db()
 
+# ✅ Root route for Render health check
+@app.get("/")
+def root():
+    return {"status": "Visitor Intel API is running"}
+
+# ✅ Pydantic model (with proper null handling)
 class VisitLog(BaseModel):
     page: str
     referrer: str
@@ -79,7 +85,7 @@ async def log_visitor(request: Request, db: Session = Depends(get_db)):
         print("❌ Unexpected error:", ex)
         return {"status": "error", "reason": "InternalServerError"}
 
-# Event logging remains unchanged
+# ✅ Event logger remains unchanged
 class EventLog(BaseModel):
     session_id: str
     fingerprint_id: str
