@@ -24,13 +24,13 @@ class VisitLog(BaseModel):
     page: str
     referrer: str
     device: str
-    session_id: str = None
-    utm_source: str = None
-    utm_medium: str = None
-    utm_campaign: str = None
-    utm_term: str = None
-    utm_content: str = None
-    fingerprint_id: str = None
+    session_id: str | None = None
+    utm_source: str | None = None
+    utm_medium: str | None = None
+    utm_campaign: str | None = None
+    utm_term: str | None = None
+    utm_content: str | None = None
+    fingerprint_id: str | None = None
 
 @app.post("/log-visit")
 async def log_visitor(request: Request, db: Session = Depends(get_db)):
