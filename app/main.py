@@ -120,7 +120,7 @@ async def log_visitor(request: Request, db: Session = Depends(get_db)):
         db.add(derived)
         db.commit()
 
-        print("✅ Record inserted into SQLite:", record.id)
+        print("✅ Record inserted into PostgreSQL:", record.id)
         return {"status": "success", "db_id": record.id}
 
     except ValidationError as e:
