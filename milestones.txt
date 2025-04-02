@@ -1,0 +1,10 @@
+✅ Milestone Summary: milestone-visitor-logs-postgres
+Component	Description
+Backend	FastAPI
+DB Upgrade	Migrated from local SQLite to Render PostgreSQL
+Persistence	All logs now survive redeploys and reboots
+Models	VisitorLog, VisitorEventLog, VisitorDerivedLog
+Enrichments	IP enrichment (IPinfo), UTM tracking, fingerprint, session ID
+Routes	/log-visit, /log-event, /dashboard/visits, /dashboard/events, /dashboard/derived
+Environment	.env with DATABASE_URL added (and .env gitignored)
+Validated	Logs appearing in PostgreSQL via Render console logs

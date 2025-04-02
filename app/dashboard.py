@@ -9,8 +9,17 @@ from fastapi.responses import JSONResponse
 router = APIRouter()
 
 # Helper to serialize SQLAlchemy records
+from datetime import datetime
+
 def serialize(model):
-    return {k: v for k, v in vars(model).items() if not k.startswith("_") and k != "metadata"}
+    result = {}
+    for k, v in vars(model).items():
+        if not k.startswith("_") and k != "metadata":
+            if isinstance(v, datetime):
+                result[k] = v.isoformat()
+            else:
+                result[k] = v
+    return result
 
 # Route: All visitor logs (passive logger)
 @router.get("/dashboard/visits")
