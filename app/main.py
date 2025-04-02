@@ -16,9 +16,15 @@ app = FastAPI()
 app.include_router(dashboard.router)
 
 # CORS setup
+from fastapi.middleware.cors import CORSMiddleware
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://anirudhbatraofficial.com"],
+    allow_origins=[
+        "https://anirudhbatraofficial.com",  # production domain
+        "http://localhost:5173"              # local React dev server
+    ],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
