@@ -7,7 +7,7 @@ from app.ipinfo import enrich_ip_data
 from app.models import VisitorLog, VisitorEventLog, VisitorDerivedLog
 from datetime import datetime
 
-# 🆕 Import dashboard routes
+# 🆕️ Import dashboard routes
 from app import dashboard
 
 app = FastAPI()
@@ -16,8 +16,6 @@ app = FastAPI()
 app.include_router(dashboard.router)
 
 # CORS setup
-from fastapi.middleware.cors import CORSMiddleware
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -48,6 +46,7 @@ class VisitLog(BaseModel):
     utm_term: str | None = None
     utm_content: str | None = None
     fingerprint_id: str | None = None
+    entropy_data: dict | None = None
 
 @app.post("/log-visit")
 async def log_visitor(request: Request, db: Session = Depends(get_db)):
@@ -79,6 +78,7 @@ async def log_visitor(request: Request, db: Session = Depends(get_db)):
             utm_term=visit.utm_term,
             utm_content=visit.utm_content,
             fingerprint_id=visit.fingerprint_id,
+            entropy_data=visit.entropy_data
         )
 
         db.add(record)
@@ -145,6 +145,7 @@ class EventLog(BaseModel):
     page: str
     referrer: str
     device: str
+    entropy_data: dict | None = None
 
 @app.post("/log-event")
 def log_event(event: EventLog, request: Request, db: Session = Depends(get_db)):
@@ -167,6 +168,7 @@ def log_event(event: EventLog, request: Request, db: Session = Depends(get_db)):
         country=enriched.get("Country"),
         organization=enriched.get("Organization"),
         enriched_source="IPinfo",
+        entropy_data=event.entropy_data,
         timestamp=datetime.utcnow(),
     )
 

@@ -1,5 +1,6 @@
-from sqlalchemy import Column, String, Integer, DateTime
+from sqlalchemy import Column, String, Integer, DateTime, Text
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.dialects.postgresql import JSONB
 from datetime import datetime
 
 Base = declarative_base()
@@ -29,6 +30,19 @@ class VisitorLog(Base):
 
     # Fingerprinting
     fingerprint_id = Column(String)
+    entropy_data = Column(JSONB)
+    user_agent = Column(Text)
+    screen_res = Column(String)
+    color_depth = Column(String)
+    timezone = Column(String)
+    language = Column(String)
+    platform = Column(String)
+    device_memory = Column(String)
+    cpu_cores = Column(String)
+    gpu_vendor = Column(String)
+    gpu_renderer = Column(String)
+    canvas_hash = Column(String)
+    audio_hash = Column(String)
 
 class VisitorEventLog(Base):
     __tablename__ = "visitor_event_logs"
@@ -50,6 +64,19 @@ class VisitorEventLog(Base):
     country = Column(String)
     organization = Column(String)
     enriched_source = Column(String)
+    entropy_data = Column(JSONB)
+    user_agent = Column(Text)
+    screen_res = Column(String)
+    color_depth = Column(String)
+    timezone = Column(String)
+    language = Column(String)
+    platform = Column(String)
+    device_memory = Column(String)
+    cpu_cores = Column(String)
+    gpu_vendor = Column(String)
+    gpu_renderer = Column(String)
+    canvas_hash = Column(String)
+    audio_hash = Column(String)
 
 class VisitorDerivedLog(Base):
     __tablename__ = "visitor_derived_logs"
