@@ -6,21 +6,16 @@ from app.db import get_db, init_db
 from app.ipinfo import enrich_ip_data
 from app.models import VisitorLog, VisitorEventLog, VisitorDerivedLog
 from datetime import datetime
-
-# 🆕️ Import dashboard routes
 from app import dashboard
 
 app = FastAPI()
-
-# Include dashboard router
 app.include_router(dashboard.router)
 
-# CORS setup
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://anirudhbatraofficial.com",  # production domain
-        "http://localhost:5173"              # local React dev server
+        "https://anirudhbatraofficial.com",
+        "http://localhost:5173"
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -56,10 +51,9 @@ async def log_visitor(request: Request, db: Session = Depends(get_db)):
 
         visit = VisitLog(**body)
         ip = request.client.host
-        print("🌍 Client IP address:", ip)
-
         enriched = enrich_ip_data(ip)
-        print("🔍 Enriched IP data:", enriched)
+
+        entropy = visit.entropy_data or {}
 
         record = VisitorLog(
             page=visit.page,
@@ -78,7 +72,19 @@ async def log_visitor(request: Request, db: Session = Depends(get_db)):
             utm_term=visit.utm_term,
             utm_content=visit.utm_content,
             fingerprint_id=visit.fingerprint_id,
-            entropy_data=visit.entropy_data
+            entropy_data=visit.entropy_data,
+            user_agent=entropy.get("userAgent"),
+            screen_res=entropy.get("screen"),
+            color_depth=entropy.get("colorDepth"),
+            timezone=entropy.get("timezone"),
+            language=entropy.get("language"),
+            platform=entropy.get("platform"),
+            device_memory=entropy.get("deviceMemory"),
+            cpu_cores=entropy.get("hardwareConcurrency"),
+            gpu_vendor=entropy.get("webglVendor"),
+            gpu_renderer=entropy.get("webglRenderer"),
+            canvas_hash=entropy.get("canvas"),
+            audio_hash=entropy.get("audio")
         )
 
         db.add(record)
@@ -153,6 +159,7 @@ def log_event(event: EventLog, request: Request, db: Session = Depends(get_db)):
 
     ip = request.client.host
     enriched = enrich_ip_data(ip)
+    entropy = event.entropy_data or {}
 
     record = VisitorEventLog(
         session_id=event.session_id,
@@ -169,6 +176,18 @@ def log_event(event: EventLog, request: Request, db: Session = Depends(get_db)):
         organization=enriched.get("Organization"),
         enriched_source="IPinfo",
         entropy_data=event.entropy_data,
+        user_agent=entropy.get("userAgent"),
+        screen_res=entropy.get("screen"),
+        color_depth=entropy.get("colorDepth"),
+        timezone=entropy.get("timezone"),
+        language=entropy.get("language"),
+        platform=entropy.get("platform"),
+        device_memory=entropy.get("deviceMemory"),
+        cpu_cores=entropy.get("hardwareConcurrency"),
+        gpu_vendor=entropy.get("webglVendor"),
+        gpu_renderer=entropy.get("webglRenderer"),
+        canvas_hash=entropy.get("canvas"),
+        audio_hash=entropy.get("audio"),
         timestamp=datetime.utcnow(),
     )
 
