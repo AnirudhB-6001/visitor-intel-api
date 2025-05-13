@@ -55,6 +55,16 @@ async def log_visitor(request: Request, db: Session = Depends(get_db)):
         enriched = enrich_ip_data(ip)
         entropy = visit.entropy_data or {}
 
+        # Convert client timestamp
+        try:
+            parsed_client_ts = (
+                datetime.fromisoformat(visit.client_timestamp.replace("Z", "+00:00"))
+                if visit.client_timestamp else None
+            )
+        except Exception as e:
+            print("⚠️ Invalid client timestamp:", e)
+            parsed_client_ts = None
+
         # Assign visitor alias
         subquery = (
             db.query(VisitorLog.visitor_alias)
@@ -117,7 +127,7 @@ async def log_visitor(request: Request, db: Session = Depends(get_db)):
             audio_hash=entropy.get("audio"),
             visitor_alias=visitor_alias,
             session_label=session_label,
-            client_timestamp=visit.client_timestamp,
+            client_timestamp=parsed_client_ts,
         )
 
         db.add(record)
@@ -193,6 +203,15 @@ def log_event(event: EventLog, request: Request, db: Session = Depends(get_db)):
     enriched = enrich_ip_data(ip)
     entropy = event.entropy_data or {}
 
+    try:
+        parsed_client_ts = (
+            datetime.fromisoformat(event.client_timestamp.replace("Z", "+00:00"))
+            if event.client_timestamp else None
+        )
+    except Exception as e:
+        print("⚠️ Invalid client timestamp on event:", e)
+        parsed_client_ts = None
+
     record = VisitorEventLog(
         session_id=event.session_id,
         fingerprint_id=event.fingerprint_id,
@@ -221,7 +240,7 @@ def log_event(event: EventLog, request: Request, db: Session = Depends(get_db)):
         canvas_hash=entropy.get("canvas"),
         audio_hash=entropy.get("audio"),
         timestamp=datetime.utcnow(),
-        client_timestamp=event.client_timestamp,
+        client_timestamp=parsed_client_ts,
     )
 
     db.add(record)

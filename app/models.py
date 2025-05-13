@@ -10,6 +10,8 @@ class VisitorLog(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     timestamp = Column(DateTime, default=datetime.utcnow)
+    client_timestamp = Column(DateTime, nullable=True)
+
     page = Column(String)
     referrer = Column(String)
     device = Column(String)
@@ -53,6 +55,8 @@ class VisitorEventLog(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     timestamp = Column(DateTime, default=datetime.utcnow)
+    client_timestamp = Column(DateTime, nullable=True)
+
     session_id = Column(String)
     fingerprint_id = Column(String)
     event_type = Column(String)
