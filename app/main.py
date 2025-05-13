@@ -52,26 +52,37 @@ async def log_visitor(request: Request, db: Session = Depends(get_db)):
         visit = VisitLog(**body)
         ip = request.client.host
         enriched = enrich_ip_data(ip)
-
         entropy = visit.entropy_data or {}
 
-        # Assign visitor alias (server-side)
-        all_visitor_ids = db.query(VisitorLog.fingerprint_id).distinct().all()
-        visitor_id_set = {r[0] for r in all_visitor_ids if r[0] is not None}
-        if visit.fingerprint_id not in visitor_id_set:
-            visitor_alias = f"Visitor_{str(len(visitor_id_set) + 1).zfill(3)}"
+        # Assign visitor alias
+        subquery = (
+            db.query(VisitorLog.visitor_alias)
+            .filter(VisitorLog.fingerprint_id == visit.fingerprint_id)
+            .filter(VisitorLog.visitor_alias.isnot(None))
+            .order_by(VisitorLog.id.asc())
+            .first()
+        )
+        if subquery:
+            visitor_alias = subquery[0]
         else:
-            subquery = db.query(VisitorLog.visitor_alias).filter(VisitorLog.fingerprint_id == visit.fingerprint_id).order_by(VisitorLog.id.asc()).first()
-            visitor_alias = subquery[0] if subquery else "Visitor_000"
+            count = db.query(VisitorLog.visitor_alias).filter(VisitorLog.visitor_alias.isnot(None)).distinct().count()
+            visitor_alias = f"Visitor_{str(count + 1).zfill(3)}"
 
-        # Assign session alias (server-side)
-        all_session_ids = db.query(VisitorLog.session_id).distinct().all()
-        session_id_set = {r[0] for r in all_session_ids if r[0] is not None}
-        if visit.session_id not in session_id_set:
-            session_label = f"Session_{str(len(session_id_set) + 1).zfill(3)}"
+        # Assign session alias
+        subquery = (
+            db.query(VisitorLog.session_label)
+            .filter(VisitorLog.session_id == visit.session_id)
+            .filter(VisitorLog.session_label.isnot(None))
+            .order_by(VisitorLog.id.asc())
+            .first()
+        )
+        if subquery:
+            session_label = subquery[0]
         else:
-            subquery = db.query(VisitorLog.session_label).filter(VisitorLog.session_id == visit.session_id).order_by(VisitorLog.id.asc()).first()
-            session_label = subquery[0] if subquery else "Session_000"
+            count = db.query(VisitorLog.session_label).filter(VisitorLog.session_label.isnot(None)).distinct().count()
+            session_label = f"Session_{str(count + 1).zfill(3)}"
+
+        print("🧠 Alias assignment:", visitor_alias, session_label)
 
         record = VisitorLog(
             page=visit.page,
@@ -111,7 +122,7 @@ async def log_visitor(request: Request, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(record)
 
-        visit_type = "Returning" if len([v for v in visitor_id_set if v == visit.fingerprint_id]) > 0 else "New"
+        visit_type = "Returning" if subquery else "New"
 
         traffic_type = "Direct"
         if visit.utm_source:
