@@ -10,7 +10,7 @@ from app.models import VisitorLog, VisitorEventLog, VisitorDerivedLog
 
 router = APIRouter()
 
-# ✅ Helper to serialize SQLAlchemy records
+# ✅ Helper to serialize SQLAlchemy records (including datetime fields like client_timestamp)
 def serialize(model):
     return {
         k: (v.isoformat() if isinstance(v, datetime) else v)
