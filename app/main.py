@@ -56,12 +56,22 @@ async def log_visitor(request: Request, db: Session = Depends(get_db)):
         entropy = visit.entropy_data or {}
 
         # Assign visitor alias (server-side)
-        visitor_index = db.query(VisitorLog).filter(VisitorLog.fingerprint_id == visit.fingerprint_id).count()
-        visitor_alias = f"Visitor_{str(visitor_index + 1).zfill(3)}"
+        all_visitor_ids = db.query(VisitorLog.fingerprint_id).distinct().all()
+        visitor_id_set = {r[0] for r in all_visitor_ids if r[0] is not None}
+        if visit.fingerprint_id not in visitor_id_set:
+            visitor_alias = f"Visitor_{str(len(visitor_id_set) + 1).zfill(3)}"
+        else:
+            subquery = db.query(VisitorLog.visitor_alias).filter(VisitorLog.fingerprint_id == visit.fingerprint_id).order_by(VisitorLog.id.asc()).first()
+            visitor_alias = subquery[0] if subquery else "Visitor_000"
 
         # Assign session alias (server-side)
-        session_index = db.query(VisitorLog).filter(VisitorLog.session_id == visit.session_id).count()
-        session_label = f"Session_{str(session_index + 1).zfill(3)}"
+        all_session_ids = db.query(VisitorLog.session_id).distinct().all()
+        session_id_set = {r[0] for r in all_session_ids if r[0] is not None}
+        if visit.session_id not in session_id_set:
+            session_label = f"Session_{str(len(session_id_set) + 1).zfill(3)}"
+        else:
+            subquery = db.query(VisitorLog.session_label).filter(VisitorLog.session_id == visit.session_id).order_by(VisitorLog.id.asc()).first()
+            session_label = subquery[0] if subquery else "Session_000"
 
         record = VisitorLog(
             page=visit.page,
@@ -101,8 +111,7 @@ async def log_visitor(request: Request, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(record)
 
-        # Derived enrichment
-        visit_type = "Returning" if visitor_index > 0 else "New"
+        visit_type = "Returning" if len([v for v in visitor_id_set if v == visit.fingerprint_id]) > 0 else "New"
 
         traffic_type = "Direct"
         if visit.utm_source:
@@ -116,7 +125,9 @@ async def log_visitor(request: Request, db: Session = Depends(get_db)):
             if earliest:
                 entry_page = earliest.page
 
-        bounced = "Yes" if session_index <= 1 else "No"
+        session_entries = db.query(VisitorLog).filter(VisitorLog.session_id == visit.session_id).count()
+        bounced = "Yes" if session_entries <= 1 else "No"
+
         geo_region_type = "Domestic" if enriched.get("Country") == "IN" else "International"
 
         landing_source = "direct"
