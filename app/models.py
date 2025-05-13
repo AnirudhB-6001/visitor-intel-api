@@ -14,6 +14,7 @@ class VisitorLog(Base):
     referrer = Column(String)
     device = Column(String)
     session_id = Column(String)
+    fingerprint_id = Column(String)
     ip_address = Column(String)
     city = Column(String)
     region = Column(String)
@@ -29,7 +30,6 @@ class VisitorLog(Base):
     utm_content = Column(String)
 
     # Fingerprinting
-    fingerprint_id = Column(String)
     entropy_data = Column(JSONB)
     user_agent = Column(Text)
     screen_res = Column(String)
@@ -43,6 +43,10 @@ class VisitorLog(Base):
     gpu_renderer = Column(String)
     canvas_hash = Column(String)
     audio_hash = Column(String)
+
+    # ✅ New fields
+    visitor_alias = Column(String)
+    session_label = Column(String)
 
 class VisitorEventLog(Base):
     __tablename__ = "visitor_event_logs"
