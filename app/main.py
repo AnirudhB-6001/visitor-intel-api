@@ -55,11 +55,20 @@ async def log_visitor(request: Request, db: Session = Depends(get_db)):
 
         entropy = visit.entropy_data or {}
 
+        # Assign visitor alias (server-side)
+        visitor_index = db.query(VisitorLog).filter(VisitorLog.fingerprint_id == visit.fingerprint_id).count()
+        visitor_alias = f"Visitor_{str(visitor_index + 1).zfill(3)}"
+
+        # Assign session alias (server-side)
+        session_index = db.query(VisitorLog).filter(VisitorLog.session_id == visit.session_id).count()
+        session_label = f"Session_{str(session_index + 1).zfill(3)}"
+
         record = VisitorLog(
             page=visit.page,
             referrer=visit.referrer,
             device=visit.device,
             session_id=visit.session_id,
+            fingerprint_id=visit.fingerprint_id,
             ip_address=ip,
             city=enriched.get("City"),
             region=enriched.get("Region"),
@@ -71,7 +80,6 @@ async def log_visitor(request: Request, db: Session = Depends(get_db)):
             utm_campaign=visit.utm_campaign,
             utm_term=visit.utm_term,
             utm_content=visit.utm_content,
-            fingerprint_id=visit.fingerprint_id,
             entropy_data=visit.entropy_data,
             user_agent=entropy.get("userAgent"),
             screen_res=entropy.get("screen"),
@@ -84,7 +92,9 @@ async def log_visitor(request: Request, db: Session = Depends(get_db)):
             gpu_vendor=entropy.get("webglVendor"),
             gpu_renderer=entropy.get("webglRenderer"),
             canvas_hash=entropy.get("canvas"),
-            audio_hash=entropy.get("audio")
+            audio_hash=entropy.get("audio"),
+            visitor_alias=visitor_alias,
+            session_label=session_label,
         )
 
         db.add(record)
@@ -92,8 +102,7 @@ async def log_visitor(request: Request, db: Session = Depends(get_db)):
         db.refresh(record)
 
         # Derived enrichment
-        existing = db.query(VisitorLog).filter(VisitorLog.fingerprint_id == visit.fingerprint_id).count()
-        visit_type = "Returning" if existing > 1 else "New"
+        visit_type = "Returning" if visitor_index > 0 else "New"
 
         traffic_type = "Direct"
         if visit.utm_source:
@@ -107,9 +116,7 @@ async def log_visitor(request: Request, db: Session = Depends(get_db)):
             if earliest:
                 entry_page = earliest.page
 
-        session_entries = db.query(VisitorLog).filter(VisitorLog.session_id == visit.session_id).count()
-        bounced = "Yes" if session_entries <= 1 else "No"
-
+        bounced = "Yes" if session_index <= 1 else "No"
         geo_region_type = "Domestic" if enriched.get("Country") == "IN" else "International"
 
         landing_source = "direct"
