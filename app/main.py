@@ -42,6 +42,7 @@ class VisitLog(BaseModel):
     utm_content: str | None = None
     fingerprint_id: str | None = None
     entropy_data: dict | None = None
+    client_timestamp: str | None = None
 
 @app.post("/log-visit")
 async def log_visitor(request: Request, db: Session = Depends(get_db)):
@@ -116,6 +117,7 @@ async def log_visitor(request: Request, db: Session = Depends(get_db)):
             audio_hash=entropy.get("audio"),
             visitor_alias=visitor_alias,
             session_label=session_label,
+            client_timestamp=visit.client_timestamp,
         )
 
         db.add(record)
@@ -181,6 +183,7 @@ class EventLog(BaseModel):
     referrer: str
     device: str
     entropy_data: dict | None = None
+    client_timestamp: str | None = None
 
 @app.post("/log-event")
 def log_event(event: EventLog, request: Request, db: Session = Depends(get_db)):
@@ -218,6 +221,7 @@ def log_event(event: EventLog, request: Request, db: Session = Depends(get_db)):
         canvas_hash=entropy.get("canvas"),
         audio_hash=entropy.get("audio"),
         timestamp=datetime.utcnow(),
+        client_timestamp=event.client_timestamp,
     )
 
     db.add(record)
