@@ -94,7 +94,7 @@ async def log_visitor(request: Request, db: Session = Depends(get_db)):
         print("🧠 Alias assignment:", visitor_alias, session_label)
 
         # ✅ Run intelligent layer (non-blocking)
-        probable_alias = get_probable_alias(db, entropy, current_fingerprint=visit.fingerprint_id)
+        probable_alias = get_probable_alias(db, entropy, visit.fingerprint_id)
         if probable_alias:
             print("🤖 Probable match detected:", probable_alias)
 
