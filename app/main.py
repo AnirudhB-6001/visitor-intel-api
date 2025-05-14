@@ -7,7 +7,7 @@ from app.db import get_db, init_db
 from app.ipinfo import enrich_ip_data
 from app.models import VisitorLog, VisitorEventLog, VisitorDerivedLog
 from app import dashboard
-from app.intel import get_probable_alias  # 🔍 Intelligent matching layer
+from app.intel import get_probable_alias  # ✅ Intelligent matching layer
 
 app = FastAPI()
 app.include_router(dashboard.router)
@@ -93,7 +93,10 @@ async def log_visitor(request: Request, db: Session = Depends(get_db)):
 
         print("🧠 Alias assignment:", visitor_alias, session_label)
 
-        probable_alias = get_probable_alias(entropy, db)
+        # ✅ Run intelligent layer (non-blocking)
+        probable_alias = get_probable_alias(db, entropy, current_fingerprint=visit.fingerprint_id)
+        if probable_alias:
+            print("🤖 Probable match detected:", probable_alias)
 
         record = VisitorLog(
             page=visit.page,
@@ -127,8 +130,8 @@ async def log_visitor(request: Request, db: Session = Depends(get_db)):
             audio_hash=entropy.get("audio"),
             visitor_alias=visitor_alias,
             session_label=session_label,
-            client_timestamp=parsed_client_ts,
             probable_alias=probable_alias,
+            client_timestamp=parsed_client_ts,
         )
 
         db.add(record)
