@@ -2,11 +2,12 @@ from fastapi import FastAPI, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ValidationError
 from sqlalchemy.orm import Session
+from datetime import datetime
 from app.db import get_db, init_db
 from app.ipinfo import enrich_ip_data
 from app.models import VisitorLog, VisitorEventLog, VisitorDerivedLog
-from datetime import datetime
 from app import dashboard
+from app.intel import get_probable_alias  # 🔍 Intelligent matching layer
 
 app = FastAPI()
 app.include_router(dashboard.router)
@@ -55,7 +56,6 @@ async def log_visitor(request: Request, db: Session = Depends(get_db)):
         enriched = enrich_ip_data(ip)
         entropy = visit.entropy_data or {}
 
-        # Convert client timestamp
         try:
             parsed_client_ts = (
                 datetime.fromisoformat(visit.client_timestamp.replace("Z", "+00:00"))
@@ -65,7 +65,6 @@ async def log_visitor(request: Request, db: Session = Depends(get_db)):
             print("⚠️ Invalid client timestamp:", e)
             parsed_client_ts = None
 
-        # Assign visitor alias
         subquery = (
             db.query(VisitorLog.visitor_alias)
             .filter(VisitorLog.fingerprint_id == visit.fingerprint_id)
@@ -79,7 +78,6 @@ async def log_visitor(request: Request, db: Session = Depends(get_db)):
             count = db.query(VisitorLog.visitor_alias).filter(VisitorLog.visitor_alias.isnot(None)).distinct().count()
             visitor_alias = f"Visitor_{str(count + 1).zfill(3)}"
 
-        # Assign session alias
         subquery = (
             db.query(VisitorLog.session_label)
             .filter(VisitorLog.session_id == visit.session_id)
@@ -94,6 +92,8 @@ async def log_visitor(request: Request, db: Session = Depends(get_db)):
             session_label = f"Session_{str(count + 1).zfill(3)}"
 
         print("🧠 Alias assignment:", visitor_alias, session_label)
+
+        probable_alias = get_probable_alias(entropy, db)
 
         record = VisitorLog(
             page=visit.page,
@@ -128,6 +128,7 @@ async def log_visitor(request: Request, db: Session = Depends(get_db)):
             visitor_alias=visitor_alias,
             session_label=session_label,
             client_timestamp=parsed_client_ts,
+            probable_alias=probable_alias,
         )
 
         db.add(record)
@@ -135,7 +136,6 @@ async def log_visitor(request: Request, db: Session = Depends(get_db)):
         db.refresh(record)
 
         visit_type = "Returning" if subquery else "New"
-
         traffic_type = "Direct"
         if visit.utm_source:
             traffic_type = "Paid"
@@ -152,7 +152,6 @@ async def log_visitor(request: Request, db: Session = Depends(get_db)):
         bounced = "Yes" if session_entries <= 1 else "No"
 
         geo_region_type = "Domestic" if enriched.get("Country") == "IN" else "International"
-
         landing_source = "direct"
         if visit.utm_source:
             landing_source = "utm"

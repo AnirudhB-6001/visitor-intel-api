@@ -31,7 +31,7 @@ class VisitorLog(Base):
     utm_term = Column(String)
     utm_content = Column(String)
 
-    # Fingerprinting
+    # Fingerprinting (plugin count removed)
     entropy_data = Column(JSONB)
     user_agent = Column(Text)
     screen_res = Column(String)
@@ -46,9 +46,12 @@ class VisitorLog(Base):
     canvas_hash = Column(String)
     audio_hash = Column(String)
 
-    # ✅ New fields
+    # ✅ Core identity fields
     visitor_alias = Column(String)
     session_label = Column(String)
+
+    # ✅ Intelligent matching layer
+    probable_alias = Column(String)  # This is the fuzzy-matched alias (non-blocking)
 
 class VisitorEventLog(Base):
     __tablename__ = "visitor_event_logs"
