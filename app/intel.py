@@ -28,27 +28,59 @@ def fuzzy_match(val1, val2):
         return 0.0
     return SequenceMatcher(None, str(val1), str(val2)).ratio()
 
-def get_probable_alias(current_entropy: dict, db: Session) -> str | None:
-    candidates = db.query(VisitorLog).filter(VisitorLog.entropy_data.isnot(None)).all()
-    best_match = None
-    best_score = 0.0
+# 🔎 Extract specific field from entropy_data (supports multiple aliases)
+def extract_entropy_field(entropy: dict, key: str):
+    field_map = {
+        "user_agent": ["userAgent"],
+        "screen_res": ["screen"],
+        "color_depth": ["colorDepth"],
+        "timezone": ["timezone"],
+        "language": ["language"],
+        "platform": ["platform"],
+        "device_memory": ["deviceMemory"],
+        "cpu_cores": ["hardwareConcurrency"],
+        "gpu_vendor": ["webglVendor"],
+        "gpu_renderer": ["webglRenderer"],
+        "canvas_hash": ["canvas"],
+        "audio_hash": ["audio"]
+    }
+    aliases = field_map.get(key, [])
+    for alias in aliases:
+        if alias in entropy:
+            return entropy[alias]
+    return None
 
-    for row in candidates:
-        entropy = row.entropy_data or {}
-        score = 0.0
-        weight_sum = 0.0
+# 🧠 Compute and return the most probable alias based on entropy similarity
+def get_probable_alias(db: Session, entropy_data: dict, current_fingerprint: str = None) -> str | None:
+    candidates = (
+        db.query(VisitorLog)
+        .filter(VisitorLog.entropy_data.isnot(None))
+        .filter(VisitorLog.fingerprint_id != current_fingerprint)
+        .all()
+    )
 
+    if not candidates:
+        return None
+
+    def score_match(past: VisitorLog) -> float:
+        match_score = 0.0
+        total_weight = 0.0
         for key, weight in WEIGHTS.items():
-            sim = fuzzy_match(current_entropy.get(key), entropy.get(key))
-            score += sim * weight
-            weight_sum += weight
+            current_value = extract_entropy_field(entropy_data, key)
+            past_value = extract_entropy_field(past.entropy_data or {}, key)
+            if current_value is not None and past_value is not None and current_value == past_value:
+                match_score += weight
+            total_weight += weight
+        return match_score / total_weight if total_weight > 0 else 0.0
 
-        final_score = score / weight_sum if weight_sum else 0.0
+    ranked = sorted(
+        [(p.visitor_alias, score_match(p)) for p in candidates if p.visitor_alias],
+        key=lambda x: x[1],
+        reverse=True,
+    )
 
-        if final_score > best_score:
-            best_score = final_score
-            best_match = row.visitor_alias
+    if ranked and ranked[0][1] >= THRESHOLD:
+        print(f"🧠 Probable alias match: {ranked[0][0]} (Score: {ranked[0][1]:.2f})")
+        return ranked[0][0]
 
-    if best_score >= THRESHOLD:
-        return best_match
     return None
