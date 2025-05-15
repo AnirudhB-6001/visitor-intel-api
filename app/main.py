@@ -2,13 +2,14 @@ from fastapi import FastAPI, Request, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ValidationError
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
+
 from app.db import get_db, init_db
 from app.ipinfo import enrich_ip_data
 from app.models import VisitorLog, VisitorEventLog, VisitorDerivedLog
 from app import dashboard
-from app.intel import get_probable_alias  # ✅ Intelligent matching layer
+from app.intel import get_probable_alias
 
 app = FastAPI()
 app.include_router(dashboard.router)
@@ -36,20 +37,15 @@ class VisitLog(BaseModel):
     page: str
     referrer: str
     device: str
-    session_id: str | None = None
-    utm_source: str | None = None
-    utm_medium: str | None = None
-    utm_campaign: str | None = None
-    utm_term: str | None = None
-    utm_content: str | None = None
-    fingerprint_id: str | None = None
-    entropy_data: dict | None = None
-    client_timestamp: str | None = None
-
-class ExitLogRequest(BaseModel):
-    session_id: str
-    page: str
-    exit_time: str  # ISO format expected
+    session_id: Optional[str] = None
+    utm_source: Optional[str] = None
+    utm_medium: Optional[str] = None
+    utm_campaign: Optional[str] = None
+    utm_term: Optional[str] = None
+    utm_content: Optional[str] = None
+    fingerprint_id: Optional[str] = None
+    entropy_data: Optional[dict] = None
+    client_timestamp: Optional[str] = None
 
 @app.post("/log-visit")
 async def log_visitor(request: Request, db: Session = Depends(get_db)):
@@ -78,11 +74,7 @@ async def log_visitor(request: Request, db: Session = Depends(get_db)):
             .order_by(VisitorLog.id.asc())
             .first()
         )
-        if subquery:
-            visitor_alias = subquery[0]
-        else:
-            count = db.query(VisitorLog.visitor_alias).filter(VisitorLog.visitor_alias.isnot(None)).distinct().count()
-            visitor_alias = f"Visitor_{str(count + 1).zfill(3)}"
+        visitor_alias = subquery[0] if subquery else f"Visitor_{str(db.query(VisitorLog.visitor_alias).filter(VisitorLog.visitor_alias.isnot(None)).distinct().count() + 1).zfill(3)}"
 
         subquery = (
             db.query(VisitorLog.session_label)
@@ -91,11 +83,7 @@ async def log_visitor(request: Request, db: Session = Depends(get_db)):
             .order_by(VisitorLog.id.asc())
             .first()
         )
-        if subquery:
-            session_label = subquery[0]
-        else:
-            count = db.query(VisitorLog.session_label).filter(VisitorLog.session_label.isnot(None)).distinct().count()
-            session_label = f"Session_{str(count + 1).zfill(3)}"
+        session_label = subquery[0] if subquery else f"Session_{str(db.query(VisitorLog.session_label).filter(VisitorLog.session_label.isnot(None)).distinct().count() + 1).zfill(3)}"
 
         print("🧠 Alias assignment:", visitor_alias, session_label)
 
@@ -192,21 +180,21 @@ async def log_visitor(request: Request, db: Session = Depends(get_db)):
     except ValidationError as e:
         print("❌ Validation Error:", e)
         return {"status": "error", "reason": "ValidationError", "detail": e.errors()}
-
     except Exception as ex:
         print("❌ Unexpected error:", ex)
         return {"status": "error", "reason": "InternalServerError"}
+
 
 class EventLog(BaseModel):
     session_id: str
     fingerprint_id: str
     event_type: str
-    event_data: str = None
+    event_data: Optional[str] = None
     page: str
     referrer: str
     device: str
-    entropy_data: dict | None = None
-    client_timestamp: str | None = None
+    entropy_data: Optional[dict] = None
+    client_timestamp: Optional[str] = None
 
 @app.post("/log-event")
 def log_event(event: EventLog, request: Request, db: Session = Depends(get_db)):
@@ -263,6 +251,13 @@ def log_event(event: EventLog, request: Request, db: Session = Depends(get_db)):
     print("✅ Event inserted into DB:", record.id)
     return {"status": "event-logged", "event_id": record.id}
 
+
+# ✅ NEW: Exit timestamp logging
+class ExitLogRequest(BaseModel):
+    session_id: str
+    page: str
+    exit_time: str  # ISO format expected
+
 @app.post("/log-exit")
 def log_exit(data: ExitLogRequest, db: Session = Depends(get_db)):
     try:
@@ -279,11 +274,11 @@ def log_exit(data: ExitLogRequest, db: Session = Depends(get_db)):
         if not log:
             raise HTTPException(status_code=404, detail="Matching visit not found")
 
-        if log.client_timestamp:
-            delta = parsed_exit_ts - log.client_timestamp
-            time_on_page = int(delta.total_seconds())
-        else:
-            time_on_page = None
+        client_ts = log.client_timestamp
+        if client_ts and client_ts.tzinfo is None:
+            client_ts = client_ts.replace(tzinfo=timezone.utc)
+
+        time_on_page = int((parsed_exit_ts - client_ts).total_seconds()) if client_ts else None
 
         log.page_exit_time = parsed_exit_ts
         log.time_on_page = time_on_page
