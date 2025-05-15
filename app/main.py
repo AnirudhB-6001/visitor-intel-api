@@ -1,8 +1,9 @@
-from fastapi import FastAPI, Request, Depends
+from fastapi import FastAPI, Request, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ValidationError
 from sqlalchemy.orm import Session
 from datetime import datetime
+from typing import Optional
 from app.db import get_db, init_db
 from app.ipinfo import enrich_ip_data
 from app.models import VisitorLog, VisitorEventLog, VisitorDerivedLog
@@ -44,6 +45,11 @@ class VisitLog(BaseModel):
     fingerprint_id: str | None = None
     entropy_data: dict | None = None
     client_timestamp: str | None = None
+
+class ExitLogRequest(BaseModel):
+    session_id: str
+    page: str
+    exit_time: str  # ISO format expected
 
 @app.post("/log-visit")
 async def log_visitor(request: Request, db: Session = Depends(get_db)):
@@ -93,7 +99,6 @@ async def log_visitor(request: Request, db: Session = Depends(get_db)):
 
         print("🧠 Alias assignment:", visitor_alias, session_label)
 
-        # 🧠 Run matching logic with detailed output
         match_result = get_probable_alias(db, entropy, visit.fingerprint_id)
         probable_alias = match_result["probable_alias"]
         probable_score = match_result["probable_score"]
@@ -257,3 +262,36 @@ def log_event(event: EventLog, request: Request, db: Session = Depends(get_db)):
 
     print("✅ Event inserted into DB:", record.id)
     return {"status": "event-logged", "event_id": record.id}
+
+@app.post("/log-exit")
+def log_exit(data: ExitLogRequest, db: Session = Depends(get_db)):
+    try:
+        parsed_exit_ts = datetime.fromisoformat(data.exit_time.replace("Z", "+00:00"))
+
+        log = (
+            db.query(VisitorLog)
+            .filter(VisitorLog.session_id == data.session_id)
+            .filter(VisitorLog.page == data.page)
+            .order_by(VisitorLog.timestamp.desc())
+            .first()
+        )
+
+        if not log:
+            raise HTTPException(status_code=404, detail="Matching visit not found")
+
+        if log.client_timestamp:
+            delta = parsed_exit_ts - log.client_timestamp
+            time_on_page = int(delta.total_seconds())
+        else:
+            time_on_page = None
+
+        log.page_exit_time = parsed_exit_ts
+        log.time_on_page = time_on_page
+        db.commit()
+
+        print(f"✅ Exit time logged for session {data.session_id} on {data.page}")
+        return {"status": "updated", "time_on_page": time_on_page}
+
+    except Exception as ex:
+        print("❌ Error in /log-exit:", ex)
+        return {"status": "error", "reason": str(ex)}

@@ -48,9 +48,14 @@ class VisitorLog(Base):
     session_label = Column(String)
 
     probable_alias = Column(String)
-    probable_score = Column(Float)            # ✅ New field
-    best_match_alias = Column(String)         # ✅ New field
-    best_match_score = Column(Float)          # ✅ New field
+    probable_score = Column(Float)            # ✅ Enriched alias scoring
+    best_match_alias = Column(String)         # ✅ Top match logic
+    best_match_score = Column(Float)
+
+    # ✅ NEW FIELDS BELOW
+    page_exit_time = Column(DateTime, nullable=True)     # Visitor closed or navigated away
+    time_on_page = Column(Integer, nullable=True)        # Seconds spent on this page
+
 
 class VisitorEventLog(Base):
     __tablename__ = "visitor_event_logs"
@@ -86,6 +91,7 @@ class VisitorEventLog(Base):
     gpu_renderer = Column(String)
     canvas_hash = Column(String)
     audio_hash = Column(String)
+
 
 class VisitorDerivedLog(Base):
     __tablename__ = "visitor_derived_logs"
