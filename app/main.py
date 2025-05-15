@@ -93,10 +93,17 @@ async def log_visitor(request: Request, db: Session = Depends(get_db)):
 
         print("🧠 Alias assignment:", visitor_alias, session_label)
 
-        # ✅ Run intelligent layer (non-blocking)
-        probable_alias = get_probable_alias(db, entropy, visit.fingerprint_id)
+        # 🧠 Run matching logic with detailed output
+        match_result = get_probable_alias(db, entropy, visit.fingerprint_id)
+        probable_alias = match_result["probable_alias"]
+        probable_score = match_result["probable_score"]
+        best_match_alias = match_result["best_match_alias"]
+        best_match_score = match_result["best_match_score"]
+
         if probable_alias:
-            print("🤖 Probable match detected:", probable_alias)
+            print(f"🤖 Probable match detected: {probable_alias} (Score: {probable_score:.2f})")
+        else:
+            print(f"🔎 No confident match. Best guess: {best_match_alias} (Score: {best_match_score:.2f})")
 
         record = VisitorLog(
             page=visit.page,
@@ -131,6 +138,9 @@ async def log_visitor(request: Request, db: Session = Depends(get_db)):
             visitor_alias=visitor_alias,
             session_label=session_label,
             probable_alias=probable_alias,
+            probable_score=probable_score,
+            best_match_alias=best_match_alias,
+            best_match_score=best_match_score,
             client_timestamp=parsed_client_ts,
         )
 
@@ -155,11 +165,7 @@ async def log_visitor(request: Request, db: Session = Depends(get_db)):
         bounced = "Yes" if session_entries <= 1 else "No"
 
         geo_region_type = "Domestic" if enriched.get("Country") == "IN" else "International"
-        landing_source = "direct"
-        if visit.utm_source:
-            landing_source = "utm"
-        elif visit.referrer and visit.referrer != "Direct":
-            landing_source = "referrer"
+        landing_source = "utm" if visit.utm_source else ("referrer" if visit.referrer and visit.referrer != "Direct" else "direct")
 
         derived = VisitorDerivedLog(
             session_id=visit.session_id,

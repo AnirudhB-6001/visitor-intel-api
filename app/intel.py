@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.models import VisitorLog
 from difflib import SequenceMatcher
 
-# ⚙️ You can adjust these weights to tune matching behavior
+# Field weights
 WEIGHTS = {
     "user_agent": 2.0,
     "screen_res": 1.5,
@@ -20,15 +20,15 @@ WEIGHTS = {
     "audio_hash": 2.0,
 }
 
-THRESHOLD = 0.8  # Match confidence threshold
+THRESHOLD = 0.8  # Do NOT raise unless you're getting too many false positives.
 
-# 🔍 Fuzzy matching between two values (default to 0 if either is None)
+# Fuzzy match between two values
 def fuzzy_match(val1, val2):
     if not val1 or not val2:
         return 0.0
     return SequenceMatcher(None, str(val1), str(val2)).ratio()
 
-# 🔎 Extract specific field from entropy_data (supports multiple aliases)
+# Extract entropy fields
 def extract_entropy_field(entropy: dict, key: str):
     field_map = {
         "user_agent": ["userAgent"],
@@ -42,16 +42,15 @@ def extract_entropy_field(entropy: dict, key: str):
         "gpu_vendor": ["webglVendor"],
         "gpu_renderer": ["webglRenderer"],
         "canvas_hash": ["canvas"],
-        "audio_hash": ["audio"]
+        "audio_hash": ["audio"],
     }
-    aliases = field_map.get(key, [])
-    for alias in aliases:
+    for alias in field_map.get(key, []):
         if alias in entropy:
             return entropy[alias]
     return None
 
-# 🧠 Compute and return the most probable alias based on entropy similarity
-def get_probable_alias(db: Session, entropy_data: dict, current_fingerprint: str = None) -> str | None:
+# Compute most probable alias + best match always
+def get_probable_alias(db: Session, entropy_data: dict, current_fingerprint: str = None):
     candidates = (
         db.query(VisitorLog)
         .filter(VisitorLog.entropy_data.isnot(None))
@@ -60,7 +59,12 @@ def get_probable_alias(db: Session, entropy_data: dict, current_fingerprint: str
     )
 
     if not candidates:
-        return None
+        return {
+            "probable_alias": None,
+            "probable_score": 0.0,
+            "best_match_alias": None,
+            "best_match_score": 0.0,
+        }
 
     def score_match(past: VisitorLog) -> float:
         match_score = 0.0
@@ -79,8 +83,17 @@ def get_probable_alias(db: Session, entropy_data: dict, current_fingerprint: str
         reverse=True,
     )
 
-    if ranked and ranked[0][1] >= THRESHOLD:
-        print(f"🧠 Probable alias match: {ranked[0][0]} (Score: {ranked[0][1]:.2f})")
-        return ranked[0][0]
+    best_alias, best_score = ranked[0] if ranked else (None, 0.0)
+    probable_alias = best_alias if best_score >= THRESHOLD else None
 
-    return None
+    if probable_alias:
+        print(f"🧠 Probable alias match: {probable_alias} (Score: {best_score:.2f})")
+    else:
+        print(f"🧐 No alias passed threshold. Best match: {best_alias} (Score: {best_score:.2f})")
+
+    return {
+        "probable_alias": probable_alias,
+        "probable_score": best_score if probable_alias else None,
+        "best_match_alias": best_alias,
+        "best_match_score": best_score,
+    }
